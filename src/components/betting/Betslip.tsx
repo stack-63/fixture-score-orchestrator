@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { formatOdd, kes, useApp } from "@/lib/store";
 
 export function Betslip({ onDeposit }: { onDeposit: () => void }) {
-  const { selections, removeSelection, balance, placeBet, oddsFormat } = useApp();
+  const { selections, removeSelection, balance, placeBet, oddsFormat, user } = useApp();
   const [stake, setStake] = useState(100);
   const [loading, setLoading] = useState(false);
   const [warn, setWarn] = useState(false);
@@ -18,6 +18,7 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
     return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Your betslip is empty. Select odds from any match to place a bet.</p>;
 
   const place = () => {
+    if (!user) return; // signed-out users never reach this; the button is replaced by a sign-in CTA
     if (balance <= 0 || stake > balance) return setWarn(true);
     setWarn(false);
     setLoading(true);
@@ -61,9 +62,15 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
           Insufficient balance. <button className="font-semibold text-primary underline" onClick={onDeposit}>Deposit now</button>
         </div>
       )}
-      <Button variant="neon" size="lg" className="w-full" disabled={loading || stake < 1} onClick={place}>
-        {loading ? <><Loader2 className="animate-spin" /> Placing…</> : "Place Bet"}
-      </Button>
+      {user ? (
+        <Button variant="neon" size="lg" className="w-full" disabled={loading || stake < 1} onClick={place}>
+          {loading ? <><Loader2 className="animate-spin" /> Placing…</> : "Place Bet"}
+        </Button>
+      ) : (
+        <Button asChild variant="neon" size="lg" className="w-full">
+          <Link to="/auth" search={{ redirect: "/betslip" }}>Sign in to place your bet</Link>
+        </Button>
+      )}
       <Dialog open={success !== null} onOpenChange={() => setSuccess(null)}>
         <DialogContent className="text-center">
           <DialogHeader><DialogTitle className="text-2xl">Bet Placed!</DialogTitle></DialogHeader>
