@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BetslipRouteImport } from './routes/betslip'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as MyBetsRouteImport } from './routes/my-bets'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BetslipRoute = BetslipRouteImport.update({
@@ -50,6 +56,7 @@ const ProfileRoute = ProfileRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
   '/betslip': typeof BetslipRoute
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
   '/betslip': typeof BetslipRoute
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth': typeof AuthRoute
   '/betslip': typeof BetslipRoute
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
@@ -74,16 +83,25 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/betslip' | '/live' | '/my-bets' | '/profile'
+  fullPaths:
+    '/' | '/admin' | '/auth' | '/betslip' | '/live' | '/my-bets' | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/betslip' | '/live' | '/my-bets' | '/profile'
+  to: '/' | '/admin' | '/auth' | '/betslip' | '/live' | '/my-bets' | '/profile'
   id:
-    '__root__' | '/' | '/admin' | '/betslip' | '/live' | '/my-bets' | '/profile'
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/betslip'
+    | '/live'
+    | '/my-bets'
+    | '/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AuthRoute: typeof AuthRoute
   BetslipRoute: typeof BetslipRoute
   LiveRoute: typeof LiveRoute
   MyBetsRoute: typeof MyBetsRoute
@@ -104,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/betslip': {
@@ -140,6 +165,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AuthRoute: AuthRoute,
   BetslipRoute: BetslipRoute,
   LiveRoute: LiveRoute,
   MyBetsRoute: MyBetsRoute,

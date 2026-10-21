@@ -8,7 +8,7 @@ import { Betslip } from "./Betslip";
 import { DepositModal } from "./DepositModal";
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { balance, selections, isAdmin } = useApp();
+  const { balance, selections, isAdmin, user } = useApp();
   const [depositOpen, setDepositOpen] = useState(false);
   const [slipOpen, setSlipOpen] = useState(false);
 
@@ -28,10 +28,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-3 sm:px-6">
           <Link to="/" className="font-display text-2xl font-extrabold tracking-wide">BET<span className="text-primary">POAKE</span></Link>
           <div className="ml-auto flex items-center gap-2">
-            <span className="hidden rounded-md bg-secondary px-2.5 py-1.5 text-sm font-semibold sm:block">{kes(balance)}</span>
-            <Button size="sm" variant="neon" onClick={() => setDepositOpen(true)}>Deposit</Button>
-            <Button size="icon" variant="ghost" aria-label="Notifications"><Bell /></Button>
-            <Link to="/profile" className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-xs font-bold">JK</Link>
+            {user ? (
+              <>
+                <span className="hidden rounded-md bg-secondary px-2.5 py-1.5 text-sm font-semibold sm:block">{kes(balance)}</span>
+                <Button size="sm" variant="neon" onClick={() => setDepositOpen(true)}>Deposit</Button>
+                <Button size="icon" variant="ghost" aria-label="Notifications"><Bell /></Button>
+                <Link to="/profile" className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-xs font-bold uppercase">
+                  {user.email.slice(0, 2)}
+                </Link>
+              </>
+            ) : (
+              <Button asChild size="sm" variant="neon"><Link to="/auth">Sign In</Link></Button>
+            )}
           </div>
         </div>
         <div className="px-3 pb-2 text-xs font-semibold sm:hidden">Balance: <span className="text-primary">{kes(balance)}</span></div>
