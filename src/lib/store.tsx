@@ -93,15 +93,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selections, setSelections] = useState<Selection[]>([]);
   const [bets, setBets] = useState<PlacedBet[]>([]);
   const [balance, setBalance] = useState(0);
-  // SIMULATION ONLY: the real admin check must come from a server-validated
-  // `user_roles` table (has_role(auth.uid(), 'admin')), never client state.
   const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [oddsFormat, setOddsFormat] = useState<"decimal" | "fractional">("decimal");
+
+  // Single session listener for the whole app (mounted once at the root).
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ? { id: data.user.id, email: data.user.email ?? "" } : null);
+      setAuthReady(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      setUser(session?.user ? { id: session.user.id, email: session.user.email ?? "" } : null);
+      setAuthReady(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Admin status comes from the server-validated user_roles table via the
+  // has_role() security-definer function — never from client-editable state.
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    let active = true;
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
+      if (active) setIsAdmin(!!data);
+    });
+    return () => { active = false; };
+  }, [user]);
 
   const store = useMemo<Store>(() => {
     const totalOdds = selections.reduce((a, s) => a * s.odd, 1);
     return {
-      matches, selections, bets, balance, isAdmin, oddsFormat, setOddsFormat, setIsAdmin,
+      matches, selections, bets, balance, isAdmin, user, authReady, oddsFormat, setOddsFormat,
+      signOut: async () => { await supabase.auth.signOut(); },
       toggleSelection: (m, pick) => {
         const odd = pick === "1" ? m.odds.home : pick === "X" ? m.odds.draw : m.odds.away;
         setSelections((prev) => {
