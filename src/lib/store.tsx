@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type MatchStatus = "upcoming" | "live";
 export type Pick = "1" | "X" | "2";
@@ -69,9 +70,12 @@ interface Store {
   bets: PlacedBet[];
   balance: number;
   isAdmin: boolean;
+  user: { id: string; email: string } | null;
+  /** False until the first session check resolves; use to avoid UI flashing signed-out state. */
+  authReady: boolean;
+  signOut: () => Promise<void>;
   oddsFormat: "decimal" | "fractional";
   setOddsFormat: (f: "decimal" | "fractional") => void;
-  setIsAdmin: (v: boolean) => void;
   toggleSelection: (m: Match, pick: Pick) => void;
   removeSelection: (matchId: string) => void;
   clearSelections: () => void;
