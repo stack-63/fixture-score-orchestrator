@@ -34,7 +34,7 @@ function Index() {
   const [sport, setSport] = useState("Football");
   const [league, setLeague] = useState<string | null>(null);
   useEffect(() => { const t = setInterval(() => setSlide((s) => (s + 1) % banners.length), 6000); return () => clearInterval(t); }, []);
-  const b = banners[slide];
+  const b = banners[slide] ?? banners[0]!;
   const list = matches.filter((m) => !league || m.league === league);
 
   return (
