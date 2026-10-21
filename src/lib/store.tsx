@@ -179,7 +179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setBets(r.bets);
       },
     };
-  }, [matches, selections, bets, balance, isAdmin, oddsFormat]);
+  }, [matches, selections, bets, balance, isAdmin, user, authReady, oddsFormat]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
