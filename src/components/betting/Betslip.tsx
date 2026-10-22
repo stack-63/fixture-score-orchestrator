@@ -87,14 +87,7 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
           <Link to="/auth" search={{ redirect: "/betslip" }}>Sign in to place your bet</Link>
         </Button>
       )}
-      <Dialog open={success !== null} onOpenChange={() => setSuccess(null)}>
-        <DialogContent className="text-center">
-          <DialogHeader><DialogTitle className="text-2xl">Bet Placed!</DialogTitle></DialogHeader>
-          <CheckCircle2 className="mx-auto h-14 w-14 text-primary" />
-          <p className="text-sm text-muted-foreground">Potential win: <span className="font-bold text-primary">{kes(success ?? 0)}</span></p>
-          <Button asChild variant="secondary"><Link to="/my-bets" onClick={() => setSuccess(null)}>View My Bets</Link></Button>
-        </DialogContent>
-      </Dialog>
+      {successDialog}
     </div>
   );
 }
