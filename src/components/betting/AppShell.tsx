@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               </>
             ) : (
-              <Button asChild size="sm" variant="neon"><Link to="/auth">Sign In</Link></Button>
+              <Button asChild size="sm" variant="neon"><Link to="/auth" search={{ redirect: "/" }}>Sign In</Link></Button>
             )}
           </div>
         </div>

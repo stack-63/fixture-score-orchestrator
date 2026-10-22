@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { KeyRound, LogOut, Shield } from "lucide-react";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/profile")({
   component: Page,
 });
 
-function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+function Row({ title, desc, children }: { title: string; desc?: string | undefined; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b p-4 last:border-0">
       <div><p className="font-semibold">{title}</p>{desc && <p className="text-xs text-muted-foreground">{desc}</p>}</div>
@@ -28,14 +28,40 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 }
 
 function Page() {
-  const { isAdmin, setIsAdmin, oddsFormat, setOddsFormat } = useApp();
+  const { user, authReady, isAdmin, signOut, oddsFormat, setOddsFormat } = useApp();
   const [light, setLight] = useState(false);
+  const navigate = useNavigate();
+  const router = useRouter();
   useEffect(() => { document.documentElement.classList.toggle("light", light); }, [light]);
+
+  const logOut = async () => {
+    const { queryClient } = router.options.context;
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await signOut();
+    navigate({ to: "/auth", search: { redirect: "/" }, replace: true });
+  };
+
+  if (authReady && !user)
+    return (
+      <div className="max-w-xl space-y-4 py-10 text-center">
+        <h1 className="text-3xl font-bold">You're not signed in</h1>
+        <p className="text-sm text-muted-foreground">Sign in to view your profile and settings.</p>
+        <Button asChild variant="neon"><Link to="/auth" search={{ redirect: "/profile" }}>Sign In</Link></Button>
+      </div>
+    );
 
   return (
     <div className="max-w-xl space-y-4">
       <h1 className="text-3xl font-bold">Profile & Settings</h1>
       <div className="rounded-xl border bg-card">
+        <Row title="Account" desc={user?.email}>
+          {isAdmin && (
+            <span className="flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-semibold text-admin">
+              <ShieldCheck className="h-3.5 w-3.5" /> Admin
+            </span>
+          )}
+        </Row>
         <Row title="Light Theme"><Switch checked={light} onCheckedChange={setLight} /></Row>
         <Row title="Odds Format" desc={oddsFormat === "decimal" ? "Decimal (1.85)" : "Fractional (17/20)"}>
           <div className="flex gap-1">
@@ -45,17 +71,7 @@ function Page() {
           </div>
         </Row>
         <Row title="Password"><Button size="sm" variant="secondary" onClick={() => toast("Password change coming soon")}><KeyRound /> Change</Button></Row>
-        <Row title="Log Out"><Button size="sm" variant="destructive" onClick={() => toast("Logged out (simulated)")}><LogOut /> Log Out</Button></Row>
-      </div>
-
-      {/* DEV ONLY: remove before launch; real role comes from the user_roles table. */}
-      <div className="rounded-xl border border-admin/50 bg-card">
-        <Row title="Simulate Admin View" desc="Testing only — toggles admin tools on and off.">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-admin" />
-            <Switch checked={isAdmin} onCheckedChange={setIsAdmin} aria-label="Simulate Admin View" />
-          </div>
-        </Row>
+        <Row title="Log Out"><Button size="sm" variant="destructive" onClick={logOut}><LogOut /> Log Out</Button></Row>
       </div>
     </div>
   );

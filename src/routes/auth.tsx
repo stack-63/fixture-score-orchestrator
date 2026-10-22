@@ -12,8 +12,8 @@ import "@lovable.dev/cloud-auth-js/styles.css";
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect:
-      typeof search.redirect === "string" && search.redirect.startsWith("/") && !search.redirect.startsWith("//")
-        ? search.redirect
+      typeof search["redirect"] === "string" && search["redirect"].startsWith("/") && !search["redirect"].startsWith("//")
+        ? search["redirect"]
         : "/",
   }),
   head: () => ({
