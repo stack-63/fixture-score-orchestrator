@@ -21,11 +21,13 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Page() {
-  const { isAdmin, matches, addMatch } = useApp();
+  const { isAdmin, authReady, matches, addMatch } = useApp();
   const [creating, setCreating] = useState(false);
 
-  // Non-admins get nothing from the management screen rendered.
-  // TODO(supabase): also guard server-side with has_role(auth.uid(), 'admin') + RLS on fixtures.
+  // Wait for the session + role check before deciding what to render.
+  if (!authReady) return <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>;
+  // Non-admins get nothing from the management screen rendered. Admin status
+  // comes from the server-validated user_roles table (see src/lib/store.tsx).
   if (!isAdmin)
     return (
       <div className="py-16 text-center">
