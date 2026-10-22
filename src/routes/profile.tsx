@@ -18,7 +18,7 @@ export const Route = createFileRoute("/profile")({
   component: Page,
 });
 
-function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+function Row({ title, desc, children }: { title: string; desc?: string | undefined; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b p-4 last:border-0">
       <div><p className="font-semibold">{title}</p>{desc && <p className="text-xs text-muted-foreground">{desc}</p>}</div>
@@ -39,7 +39,7 @@ function Page() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await signOut();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/auth", search: { redirect: "/" }, replace: true });
   };
 
   if (authReady && !user)
