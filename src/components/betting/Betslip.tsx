@@ -14,9 +14,6 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
   const [success, setSuccess] = useState<null | number>(null);
   const totalOdds = selections.reduce((a, s) => a * s.odd, 1);
 
-  if (selections.length === 0)
-    return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Your betslip is empty. Select odds from any match to place a bet.</p>;
-
   const place = () => {
     if (!user) return; // signed-out users never reach this; the button is replaced by a sign-in CTA
     if (balance <= 0 || stake > balance) return setWarn(true);
@@ -28,6 +25,25 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
       setSuccess(bet.potentialWin);
     }, 1200);
   };
+
+  const successDialog = (
+    <Dialog open={success !== null} onOpenChange={() => setSuccess(null)}>
+      <DialogContent className="text-center">
+        <DialogHeader><DialogTitle className="text-2xl">Bet Placed!</DialogTitle></DialogHeader>
+        <CheckCircle2 className="mx-auto h-14 w-14 text-primary" />
+        <p className="text-sm text-muted-foreground">Potential win: <span className="font-bold text-primary">{kes(success ?? 0)}</span></p>
+        <Button asChild variant="secondary"><Link to="/my-bets" onClick={() => setSuccess(null)}>View My Bets</Link></Button>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (selections.length === 0)
+    return (
+      <>
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Your betslip is empty. Select odds from any match to place a bet.</p>
+        {successDialog}
+      </>
+    );
 
   return (
     <div className="space-y-3">
