@@ -43,7 +43,7 @@ export const LEAGUES = [
   "Champions League",
   "IPL Cricket",
   "Kenyan Premier League",
-];
+] as const;
 
 const seed: Match[] = [
   { id: "m1", home: "Arsenal", away: "Chelsea", league: LEAGUES[0], kickoff: "2026-10-21T17:00", status: "live", minute: 64, homeScore: 1, awayScore: 0, odds: { home: 1.85, draw: 3.4, away: 4.1 } },
