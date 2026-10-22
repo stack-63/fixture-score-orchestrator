@@ -11,7 +11,7 @@ function statusLabel(m: Match) {
   return today ? `Today ${time}` : `${d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} ${time}`;
 }
 
-export function MatchRow({ match, onEdit, onDelete }: { match: Match; onEdit?: () => void; onDelete?: () => void }) {
+export function MatchRow({ match, onEdit, onDelete }: { match: Match; onEdit?: (() => void) | undefined; onDelete?: (() => void) | undefined }) {
   const { selections, toggleSelection, oddsFormat, isAdmin } = useApp();
   const picked = selections.find((s) => s.matchId === match.id)?.pick;
   const opts: { pick: Pick; odd: number }[] = [
