@@ -202,5 +202,10 @@ export function formatOdd(d: number, format: "decimal" | "fractional") {
   return `${best.n}/${best.den}`;
 }
 
+/** A bet may only be placed by a signed-in user staking within their balance. */
+export function canPlaceBet(user: unknown, balance: number, stake: number) {
+  return !!user && stake >= 1 && balance > 0 && stake <= balance;
+}
+
 export const kes = (n: number) =>
   `${n.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KES`;
