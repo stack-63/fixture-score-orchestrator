@@ -15,8 +15,8 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
   const totalOdds = selections.reduce((a, s) => a * s.odd, 1);
 
   const place = () => {
-    if (!user) return; // signed-out users never reach this; the button is replaced by a sign-in CTA
-    if (balance <= 0 || stake > balance) return setWarn(true);
+    // Signed-out users never reach this; the button is replaced by a sign-in CTA.
+    if (!canPlaceBet(user, balance, stake)) { if (user) setWarn(true); return; }
     setWarn(false);
     setLoading(true);
     setTimeout(() => {
