@@ -1,5 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { fixturesQueryOptions } from "./fixtures.query";
+import { deleteFixture, importFixtures } from "./fixtures.functions";
+import { fixtureSchema } from "./fixtures";
 
 export type MatchStatus = "upcoming" | "live";
 export type Pick = "1" | "X" | "2";
@@ -45,14 +50,6 @@ export const LEAGUES = [
   "Kenyan Premier League",
 ] as const;
 
-const seed: Match[] = [
-  { id: "m1", home: "Arsenal", away: "Chelsea", league: LEAGUES[0], kickoff: "2026-10-21T17:00", status: "live", minute: 64, homeScore: 1, awayScore: 0, odds: { home: 1.85, draw: 3.4, away: 4.1 } },
-  { id: "m2", home: "Real Madrid", away: "Sevilla", league: LEAGUES[1], kickoff: "2026-10-21T21:00", status: "upcoming", homeScore: 0, awayScore: 0, odds: { home: 1.45, draw: 4.6, away: 6.8 } },
-  { id: "m3", home: "Inter", away: "AC Milan", league: LEAGUES[2], kickoff: "2026-10-21T19:45", status: "live", minute: 23, homeScore: 0, awayScore: 0, odds: { home: 2.1, draw: 3.2, away: 3.5 } },
-  { id: "m4", home: "Gor Mahia", away: "AFC Leopards", league: LEAGUES[5], kickoff: "2026-10-22T15:00", status: "upcoming", homeScore: 0, awayScore: 0, odds: { home: 2.05, draw: 3.0, away: 3.6 } },
-  { id: "m5", home: "Bayern Munich", away: "PSG", league: LEAGUES[3], kickoff: "2026-10-22T22:00", status: "upcoming", homeScore: 0, awayScore: 0, odds: { home: 1.95, draw: 3.75, away: 3.6 } },
-];
-
 /** Removes a fixture and voids any open bet that included it. Pure for testing. */
 export function removeFixture(matches: Match[], bets: PlacedBet[], selections: Selection[], id: string) {
   return {
@@ -70,6 +67,7 @@ interface Store {
   bets: PlacedBet[];
   balance: number;
   isAdmin: boolean;
+  roleReady: boolean;
   user: { id: string; email: string } | null;
   /** False until the first session check resolves; use to avoid UI flashing signed-out state. */
   authReady: boolean;
@@ -81,22 +79,42 @@ interface Store {
   clearSelections: () => void;
   deposit: (amount: number) => void;
   placeBet: (stake: number) => PlacedBet;
-  addMatch: (input: MatchInput) => void;
-  updateMatch: (id: string, input: MatchInput) => void;
-  deleteMatch: (id: string) => void;
+  addMatch: (input: MatchInput) => Promise<void>;
+  updateMatch: (id: string, input: MatchInput) => Promise<void>;
+  deleteMatch: (id: string) => Promise<void>;
+  acceptOdds: () => void;
 }
 
 const Ctx = createContext<Store | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [matches, setMatches] = useState<Match[]>(seed);
+  const { data: matches } = useSuspenseQuery(fixturesQueryOptions);
+  const queryClient = useQueryClient();
+  const save = useMutation({ mutationFn: useServerFn(importFixtures), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["fixtures"] }); } });
+  const remove = useMutation({ mutationFn: useServerFn(deleteFixture), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["fixtures"] }); } });
   const [selections, setSelections] = useState<Selection[]>([]);
   const [bets, setBets] = useState<PlacedBet[]>([]);
   const [balance, setBalance] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleReady, setRoleReady] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [oddsFormat, setOddsFormat] = useState<"decimal" | "fractional">("decimal");
+
+  useEffect(() => {
+    const channel = supabase.channel("fixture-feed")
+      .on("postgres_changes", { event: "*", schema: "public", table: "fixtures" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["fixtures"] });
+      }).subscribe((status) => {
+        if (status === "SUBSCRIBED") void queryClient.invalidateQueries({ queryKey: ["fixtures"] });
+      });
+    return () => { void supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  useEffect(() => {
+    const ids = new Set(matches.map((m) => m.id));
+    setBets((prev) => prev.map((bet) => bet.status === "open" && bet.selections.some((s) => !ids.has(s.matchId)) ? { ...bet, status: "void" } : bet));
+  }, [matches]);
 
   // Single session listener for the whole app (mounted once at the root).
   useEffect(() => {
@@ -106,6 +124,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      setIsAdmin(false);
+      setRoleReady(false);
       setUser(session?.user ? { id: session.user.id, email: session.user.email ?? "" } : null);
       setAuthReady(true);
     });
@@ -115,10 +135,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Admin status comes from the server-validated user_roles table via the
   // has_role() security-definer function — never from client-editable state.
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) { setIsAdmin(false); setRoleReady(true); return; }
+    setIsAdmin(false);
+    setRoleReady(false);
     let active = true;
     supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-      if (active) setIsAdmin(!!data);
+      if (active) { setIsAdmin(!!data); setRoleReady(true); }
     });
     return () => { active = false; };
   }, [user]);
@@ -126,7 +148,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const store = useMemo<Store>(() => {
     const totalOdds = selections.reduce((a, s) => a * s.odd, 1);
     return {
-      matches, selections, bets, balance, isAdmin, user, authReady, oddsFormat, setOddsFormat,
+      matches, selections, bets, balance, isAdmin, roleReady, user, authReady, oddsFormat, setOddsFormat,
       signOut: async () => { await supabase.auth.signOut(); },
       toggleSelection: (m, pick) => {
         const odd = pick === "1" ? m.odds.home : pick === "X" ? m.odds.draw : m.odds.away;
@@ -139,9 +161,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       removeSelection: (id) => setSelections((p) => p.filter((s) => s.matchId !== id)),
       clearSelections: () => setSelections([]),
+      acceptOdds: () => setSelections((prev) => prev.map((s) => {
+        const match = matches.find((m) => m.id === s.matchId);
+        return match ? { ...s, odd: selectedOdd(match, s.pick), label: `${match.home} vs ${match.away}` } : s;
+      })),
       // TODO(backend): replace with MegaPay STK push / crypto webhook via a server function.
       deposit: (amount) => setBalance((b) => b + amount),
       placeBet: (stake) => {
+        if (!canPlaceBet(user, balance, stake) || !selections.length || selectionIssues(matches, selections).length) throw new Error("Review your selections and balance before placing a bet.");
         // TODO(backend): supabase.from("bets").insert({...}) inside a server function that debits balance atomically.
         const bet: PlacedBet = {
           id: crypto.randomUUID(), selections, stake, totalOdds,
@@ -152,34 +179,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSelections([]);
         return bet;
       },
-      addMatch: (input) => {
-        // TODO(supabase): await supabase.from("fixtures").insert(input).select().single();
-        setMatches((p) => [{ ...input, id: crypto.randomUUID() }, ...p]);
+      addMatch: async (input) => {
+        const row = fixtureSchema.parse({ ...input, id: crypto.randomUUID(), kickoff: new Date(input.kickoff).toISOString() });
+        await save.mutateAsync({ data: { rows: [row], mode: "merge" } });
       },
-      updateMatch: (id, input) => {
-        // TODO(supabase): await supabase.from("fixtures").update(input).eq("id", id);
-        setMatches((p) => p.map((m) => (m.id === id ? { ...input, id } : m)));
-        // Keep betslip odds in sync with shifted odds
-        setSelections((p) =>
-          p.map((s) =>
-            s.matchId !== id ? s : {
-              ...s,
-              label: `${input.home} vs ${input.away}`,
-              odd: s.pick === "1" ? input.odds.home : s.pick === "X" ? input.odds.draw : input.odds.away,
-            },
-          ),
-        );
+      updateMatch: async (id, input) => {
+        const row = fixtureSchema.parse({ ...input, id, kickoff: new Date(input.kickoff).toISOString() });
+        await save.mutateAsync({ data: { rows: [row], mode: "merge" } });
       },
-      deleteMatch: (id) => {
-        // TODO(supabase): await supabase.from("fixtures").delete().eq("id", id);
-        // and void uncompleted betslips server-side (e.g. trigger or server function).
-        const r = removeFixture(matches, bets, selections, id);
-        setMatches(r.matches);
-        setSelections(r.selections);
-        setBets(r.bets);
-      },
+      deleteMatch: async (id) => { await remove.mutateAsync({ data: { id } }); },
     };
-  }, [matches, selections, bets, balance, isAdmin, user, authReady, oddsFormat]);
+  }, [matches, selections, bets, balance, isAdmin, roleReady, user, authReady, oddsFormat, save.mutateAsync, remove.mutateAsync]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
@@ -205,6 +215,19 @@ export function formatOdd(d: number, format: "decimal" | "fractional") {
 /** A bet may only be placed by a signed-in user staking within their balance. */
 export function canPlaceBet(user: unknown, balance: number, stake: number) {
   return !!user && stake >= 1 && balance > 0 && stake <= balance;
+}
+
+export function selectedOdd(match: Match, pick: Pick) {
+  return pick === "1" ? match.odds.home : pick === "X" ? match.odds.draw : match.odds.away;
+}
+
+export function selectionIssues(matches: Match[], selections: Selection[]) {
+  return selections.flatMap((selection) => {
+    const match = matches.find((m) => m.id === selection.matchId);
+    if (!match) return [{ matchId: selection.matchId, type: "void" as const, odd: null }];
+    const odd = selectedOdd(match, selection.pick);
+    return odd === selection.odd ? [] : [{ matchId: selection.matchId, type: "changed" as const, odd }];
+  });
 }
 
 export const kes = (n: number) =>

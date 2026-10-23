@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppProvider } from "../lib/store";
 import { AppShell } from "../components/betting/AppShell";
 import { Toaster } from "../components/ui/sonner";
+import { fixturesQueryOptions } from "../lib/fixtures.query";
 
 function NotFoundComponent() {
   return (
@@ -77,6 +78,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  loader: async ({ context }) => { await context.queryClient.ensureQueryData(fixturesQueryOptions); },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
