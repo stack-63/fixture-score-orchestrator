@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LEAGUES, type Match, type MatchInput } from "@/lib/store";
+import { fixtureSchema } from "@/lib/fixtures";
+import { toast } from "sonner";
 
 const empty: MatchInput = {
   home: "", away: "", league: LEAGUES[0], kickoff: "", status: "upcoming",
@@ -17,25 +19,34 @@ export function FixtureFormDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial?: Match | null;
-  onSubmit: (input: MatchInput) => void;
+  onSubmit: (input: MatchInput) => Promise<void>;
 }) {
   const [f, setF] = useState<MatchInput>(empty);
+  const [pending, setPending] = useState(false);
   useEffect(() => {
-    if (open) setF(initial ? { ...initial } : { ...empty, kickoff: new Date().toISOString().slice(0, 16) });
+    if (open) {
+      const date = new Date(initial?.kickoff ?? Date.now());
+      const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      setF(initial ? { ...initial, kickoff: local, odds: { ...initial.odds } } : { ...empty, kickoff: local });
+    }
   }, [open, initial]);
 
   const num = (v: string) => (v === "" ? 0 : Number(v));
   const valid = f.home.trim() && f.away.trim() && f.kickoff && f.odds.home > 1 && f.odds.draw > 1 && f.odds.away > 1;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!valid) return;
-    onSubmit({ ...f, home: f.home.trim(), away: f.away.trim() });
-    onOpenChange(false);
+    const validated = fixtureSchema.safeParse({ ...f, id: initial?.id ?? "new", kickoff: new Date(f.kickoff).toISOString() });
+    if (!validated.success) { toast.error(validated.error.issues[0]?.message ?? "Check fixture fields"); return; }
+    setPending(true);
+    try { await onSubmit({ ...f, home: f.home.trim(), away: f.away.trim() }); onOpenChange(false); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Fixture could not be saved"); }
+    finally { setPending(false); }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(value) => { if (!pending) onOpenChange(value); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-2xl">{initial ? "Edit Fixture" : "Add New Fixture"}</DialogTitle>
@@ -45,13 +56,7 @@ export function FixtureFormDialog({
             <div className="grid gap-1.5"><Label>Home Team Name</Label><Input value={f.home} onChange={(e) => setF({ ...f, home: e.target.value })} required /></div>
             <div className="grid gap-1.5"><Label>Away Team Name</Label><Input value={f.away} onChange={(e) => setF({ ...f, away: e.target.value })} required /></div>
           </div>
-          <div className="grid gap-1.5">
-            <Label>Tournament / League</Label>
-            <Select value={f.league} onValueChange={(v) => setF({ ...f, league: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{LEAGUES.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
+          <div className="grid gap-1.5"><Label>Tournament / League</Label><Input value={f.league} onChange={(e) => setF({ ...f, league: e.target.value })} required maxLength={160} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5"><Label>Match Date / Time</Label><Input type="datetime-local" value={f.kickoff} onChange={(e) => setF({ ...f, kickoff: e.target.value })} required /></div>
             <div className="grid gap-1.5">
@@ -78,8 +83,8 @@ export function FixtureFormDialog({
             ))}
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" variant="neon" disabled={!valid}>{initial ? "Save Changes" : "Add Fixture"}</Button>
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" variant="neon" disabled={!valid || pending}>{pending ? "Saving…" : initial ? "Save Changes" : "Add Fixture"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

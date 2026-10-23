@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FixtureFormDialog } from "@/components/betting/FixtureFormDialog";
 import { FixtureList } from "@/components/betting/FixtureList";
 import { useApp } from "@/lib/store";
+import { FixtureJsonManager } from "@/components/betting/FixtureJsonManager";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -21,11 +22,11 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Page() {
-  const { isAdmin, authReady, matches, addMatch } = useApp();
+  const { isAdmin, authReady, roleReady, matches, addMatch } = useApp();
   const [creating, setCreating] = useState(false);
 
   // Wait for the session + role check before deciding what to render.
-  if (!authReady) return <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>;
+  if (!authReady || !roleReady) return <p className="py-16 text-center text-sm text-muted-foreground">Loading…</p>;
   // Non-admins get nothing from the management screen rendered. Admin status
   // comes from the server-validated user_roles table (see src/lib/store.tsx).
   if (!isAdmin)
@@ -46,11 +47,11 @@ function Page() {
           <h1 className="text-3xl font-bold">Fixtures Management</h1>
           <p className="text-sm text-muted-foreground">{matches.length} fixtures · {live} live</p>
         </div>
-        <Button variant="admin" onClick={() => setCreating(true)}><Plus /> Add Game</Button>
+        <div className="flex flex-wrap gap-2"><FixtureJsonManager /><Button variant="admin" onClick={() => setCreating(true)}><Plus /> Add Game</Button></div>
       </div>
       <FixtureList matches={matches} empty="No fixtures yet. Add your first game." />
       <FixtureFormDialog open={creating} onOpenChange={setCreating}
-        onSubmit={(input) => { addMatch(input); toast.success("Fixture added to live feed"); }} />
+        onSubmit={async (input) => { await addMatch(input); toast.success("Fixture added to live feed"); }} />
     </div>
   );
 }
