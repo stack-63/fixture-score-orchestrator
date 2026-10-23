@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      fixtures: {
+        Row: {
+          away: string
+          away_score: number
+          home: string
+          home_score: number
+          id: string
+          kickoff: string
+          league: string
+          minute: number | null
+          odds: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          away: string
+          away_score?: number
+          home: string
+          home_score?: number
+          id: string
+          kickoff: string
+          league: string
+          minute?: number | null
+          odds: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          away?: string
+          away_score?: number
+          home?: string
+          home_score?: number
+          id?: string
+          kickoff?: string
+          league?: string
+          minute?: number | null
+          odds?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -37,6 +79,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_fixture: { Args: { _id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -44,6 +87,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_fixtures: { Args: { _mode: string; _rows: Json }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
