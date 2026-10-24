@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <aside className="sticky top-20 hidden h-fit w-52 shrink-0 space-y-1 lg:block">
           {nav.map((n) => (
             <Link key={n.to} to={n.to} activeOptions={{ exact: true }}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary ${"admin" in n ? "text-admin" : ""}`}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 font-display text-lg font-semibold uppercase tracking-wider hover:bg-secondary ${"admin" in n ? "text-admin" : ""}`}
               activeProps={{ className: "bg-secondary text-primary" }}>
               <n.icon className="h-4 w-4" />{n.label}
               {"badge" in n && n.badge > 0 && <span className="ml-auto rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">{n.badge}</span>}
