@@ -16,7 +16,7 @@ export interface Match {
   league: string;
   kickoff: string; // datetime-local string, e.g. 2026-10-21T18:00
   status: MatchStatus;
-  minute?: number;
+  minute?: number | undefined;
   homeScore: number;
   awayScore: number;
   odds: { home: number; draw: number; away: number };
@@ -222,7 +222,7 @@ export function selectedOdd(match: Match, pick: Pick) {
 }
 
 export function selectionIssues(matches: Match[], selections: Selection[]) {
-  return selections.flatMap((selection) => {
+  return selections.flatMap<{ matchId: string; type: "void" | "changed"; odd: number | null }>((selection) => {
     const match = matches.find((m) => m.id === selection.matchId);
     if (!match) return [{ matchId: selection.matchId, type: "void" as const, odd: null }];
     const odd = selectedOdd(match, selection.pick);
