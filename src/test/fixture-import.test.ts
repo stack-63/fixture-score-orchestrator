@@ -10,6 +10,8 @@ describe("admin fixture JSON", () => {
   it("rejects invalid match status", () => { expect(parseFixtureJson(JSON.stringify([{ ...row, status: "finished" }])).rows).toBeNull(); });
   it("requires an ISO kickoff with timezone", () => { expect(parseFixtureJson(JSON.stringify([{ ...row, kickoff: "tomorrow" }])).rows).toBeNull(); });
   it("rejects duplicate fixture IDs", () => { expect(parseFixtureJson(JSON.stringify([row, row])).rows).toBeNull(); });
+  it("rejects JSON over the 2 MB upload limit", () => { expect(parseFixtureJson(" ".repeat(2 * 1024 * 1024 + 1)).errors).toContain("The file exceeds 2 MB."); });
+  it("rejects schedules over 2000 fixtures", () => { expect(parseFixtureJson(JSON.stringify(Array.from({ length: 2001 }, (_, i) => ({ ...row, id: `game-${i}` })))).rows).toBeNull(); });
   it("merge updates IDs and adds new IDs without removing others", () => { expect(importSummary([{ id: "a" }, { id: "b" }], [{ id: "b" }, { id: "c" }], "merge")).toEqual({ added: 1, updated: 1, removed: 0 }); });
   it("replace removes IDs missing from the new schedule", () => { expect(importSummary([{ id: "a" }, { id: "b" }], [{ id: "b" }, { id: "c" }], "replace")).toEqual({ added: 1, updated: 1, removed: 1 }); });
   it("rejects non-admin writes", () => { expect(() => requireFixtureAdmin(false)).toThrow("Only admins"); });
