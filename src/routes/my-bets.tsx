@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/my-bets")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "My Bets — BETPOAKE" },
       { name: "description", content: "Track your open and settled bets." },
       { property: "og:title", content: "My Bets — BETPOAKE" },

@@ -3,12 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Dumbbell, Goal, Swords, Trophy, Volleyball, CircleDot, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FixtureList } from "@/components/betting/FixtureList";
-import { LEAGUES, useApp } from "@/lib/store";
+import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "BETPOAKE — Live Odds & Sports Betting in Kenya" },
       { name: "description", content: "Bet on football, basketball, cricket and more with sharp odds in KES. Live and upcoming fixtures." },
       { property: "og:title", content: "BETPOAKE — Live Odds & Sports Betting" },
@@ -34,7 +36,8 @@ function Index() {
   const [sport, setSport] = useState("Football");
   const [league, setLeague] = useState<string | null>(null);
   useEffect(() => { const t = setInterval(() => setSlide((s) => (s + 1) % banners.length), 6000); return () => clearInterval(t); }, []);
-  const b = banners[slide] ?? banners[0]!;
+  const b = banners[slide] ?? banners[0];
+  if (!b) return null;
   const list = matches.filter((m) => !league || m.league === league);
 
   return (
@@ -62,14 +65,13 @@ function Index() {
 
       <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3">
         <button onClick={() => setLeague(null)} className={cn("shrink-0 rounded-md px-3 py-1 text-xs font-semibold", !league ? "bg-accent text-accent-foreground" : "bg-secondary")}>All Competitions</button>
-        {LEAGUES.map((l) => (
+        {[...new Set(matches.map((m) => m.league))].map((l) => (
           <button key={l} onClick={() => setLeague(l)} className={cn("shrink-0 rounded-md px-3 py-1 text-xs font-semibold", league === l ? "bg-accent text-accent-foreground" : "bg-secondary")}>{l}</button>
         ))}
       </div>
 
       <section>
         <h2 className="mb-2 text-2xl font-bold">{sport} — Live & Upcoming</h2>
-        {/* TODO(supabase): fetch fixtures via loader + supabase.from("fixtures").select() */}
         <FixtureList matches={sport === "Football" ? list : []} empty={`No ${sport} fixtures right now.`} />
       </section>
     </div>

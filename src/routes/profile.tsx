@@ -9,6 +9,8 @@ import { useApp } from "@/lib/store";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Profile & Settings — BETPOAKE" },
       { name: "description", content: "Manage your account, theme and odds format." },
       { property: "og:title", content: "Profile & Settings — BETPOAKE" },

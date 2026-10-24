@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { fixtureBatchSchema, requireFixtureAdmin, type Fixture } from "./fixtures";
+import { fixtureBatchSchema, MAX_JSON_BYTES, requireFixtureAdmin, type Fixture } from "./fixtures";
 
 export const listFixtures = createServerFn({ method: "GET" }).handler(async (): Promise<Fixture[]> => {
   const url = process.env["SUPABASE_URL"];
@@ -18,9 +18,9 @@ export const listFixtures = createServerFn({ method: "GET" }).handler(async (): 
       return fetch(input, { ...init, headers });
     } },
   });
-  const { data, error } = await client.from("fixtures").select("id,home,away,league,kickoff,status,minute,home_score,away_score,odds").order("kickoff").limit(2000);
-  if (error) throw new Error("Unable to load fixtures. Please try again.");
-  return fixtureBatchSchema.parse((data ?? []).map((row) => ({
+  const batches = await Promise.all([0, 1000].map((start) => client.from("fixtures").select("id,home,away,league,kickoff,status,minute,home_score,away_score,odds").order("kickoff").order("id").range(start, start + 999)));
+  if (batches.some((batch) => batch.error)) throw new Error("Unable to load fixtures. Please try again.");
+  return fixtureBatchSchema.parse(batches.flatMap((batch) => batch.data ?? []).map((row) => ({
     id: row.id, home: row.home, away: row.away, league: row.league,
     kickoff: row.kickoff, status: row.status,
     ...(row.minute === null ? {} : { minute: row.minute }),
@@ -30,7 +30,7 @@ export const listFixtures = createServerFn({ method: "GET" }).handler(async (): 
 
 export const importFixtures = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ rows: fixtureBatchSchema, mode: z.enum(["merge", "replace"]) }))
+  .inputValidator(z.object({ rows: fixtureBatchSchema, mode: z.enum(["merge", "replace"]) }).refine((input) => new TextEncoder().encode(JSON.stringify(input.rows)).length <= MAX_JSON_BYTES, "The file exceeds 2 MB."))
   .handler(async ({ data, context }) => {
     const role = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     requireFixtureAdmin(!role.error && role.data === true);

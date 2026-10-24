@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { canPlaceBet, formatOdd, kes, useApp } from "@/lib/store";
+import { selectionIssues } from "@/lib/store";
+import { toast } from "sonner";
 
 export function Betslip({ onDeposit }: { onDeposit: () => void }) {
-  const { selections, removeSelection, balance, placeBet, oddsFormat, user } = useApp();
+  const { matches, selections, removeSelection, balance, placeBet, oddsFormat, user, acceptOdds } = useApp();
+  const issues = selectionIssues(matches, selections);
   const [stake, setStake] = useState(100);
   const [loading, setLoading] = useState(false);
   const [warn, setWarn] = useState(false);
@@ -15,15 +18,16 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
   const totalOdds = selections.reduce((a, s) => a * s.odd, 1);
 
   const place = () => {
+    if (issues.length) return;
     // Signed-out users never reach this; the button is replaced by a sign-in CTA.
     if (!canPlaceBet(user, balance, stake)) { if (user) setWarn(true); return; }
     setWarn(false);
     setLoading(true);
-    setTimeout(() => {
+    try {
       const bet = placeBet(stake);
-      setLoading(false);
       setSuccess(bet.potentialWin);
-    }, 1200);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Bet could not be placed"); }
+    finally { setLoading(false); }
   };
 
   const successDialog = (
@@ -52,11 +56,15 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{s.label}</p>
             <p className="text-xs text-muted-foreground">Pick: <span className="text-primary">{s.pick}</span></p>
+            {issues.find((issue) => issue.matchId === s.matchId)?.type === "void" && <p className="text-xs font-semibold text-destructive">Void — fixture removed</p>}
+            {issues.find((issue) => issue.matchId === s.matchId)?.type === "changed" && <p className="text-xs font-semibold text-admin">Odds changed: {s.odd.toFixed(2)} → {issues.find((issue) => issue.matchId === s.matchId)?.odd?.toFixed(2)}</p>}
           </div>
           <span className="font-display text-lg font-bold">{formatOdd(s.odd, oddsFormat)}</span>
           <Button size="icon" variant="ghost" onClick={() => removeSelection(s.matchId)} aria-label="Remove"><Trash2 /></Button>
         </div>
       ))}
+      {issues.some((issue) => issue.type === "changed") && <Button variant="secondary" className="w-full" onClick={acceptOdds}>Accept updated odds</Button>}
+      {issues.some((issue) => issue.type === "void") && <p role="alert" className="text-sm text-destructive">Remove void selections before placing your bet.</p>}
       <div className="space-y-1 text-sm">
         <div className="flex justify-between"><span className="text-muted-foreground">Total Selections</span><span>{selections.length}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Total Odds</span><span className="font-bold">{totalOdds.toFixed(2)}</span></div>
@@ -79,7 +87,7 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
         </div>
       )}
       {user ? (
-        <Button variant="neon" size="lg" className="w-full" disabled={loading || stake < 1} onClick={place}>
+        <Button variant="neon" size="lg" className="w-full" disabled={loading || stake < 1 || issues.length > 0} onClick={place}>
           {loading ? <><Loader2 className="animate-spin" /> Placing…</> : "Place Bet"}
         </Button>
       ) : (
