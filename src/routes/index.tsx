@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "BETPOAKE — Live Odds & Sports Betting in Kenya" },
       { name: "description", content: "Bet on football, basketball, cricket and more with sharp odds in KES. Live and upcoming fixtures." },
       { property: "og:title", content: "BETPOAKE — Live Odds & Sports Betting" },

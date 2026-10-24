@@ -6,6 +6,8 @@ import { DepositModal } from "@/components/betting/DepositModal";
 export const Route = createFileRoute("/betslip")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Betslip — BETPOAKE" },
       { name: "description", content: "Review your selections and place your bet." },
       { property: "og:title", content: "Betslip — BETPOAKE" },

@@ -5,6 +5,8 @@ import { useApp } from "@/lib/store";
 export const Route = createFileRoute("/live")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Live Matches — BETPOAKE" },
       { name: "description", content: "In-play matches with live scores and odds." },
       { property: "og:title", content: "Live Matches — BETPOAKE" },
