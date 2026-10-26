@@ -24,9 +24,15 @@ export const listFixtures = createServerFn({ method: "GET" }).handler(async (): 
     id: row.id, home: row.home, away: row.away, league: row.league,
     kickoff: row.kickoff, status: row.status,
     ...(row.minute === null ? {} : { minute: row.minute }),
-    homeScore: row.home_score, awayScore: row.away_score, odds: row.odds,
+    homeScore: row.home_score, awayScore: row.away_score, ...splitOdds(row.odds),
   })));
 });
+
+// Extra markets are stored inside the odds JSON column under "markets".
+function splitOdds(raw: unknown) {
+  const { markets, ...odds } = (raw ?? {}) as Record<string, unknown>;
+  return markets && typeof markets === "object" ? { odds, markets } : { odds };
+}
 
 export const importFixtures = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -34,7 +40,7 @@ export const importFixtures = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const role = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     requireFixtureAdmin(!role.error && role.data === true);
-    const result = await context.supabase.rpc("import_fixtures", { _rows: data.rows, _mode: data.mode });
+    const result = await context.supabase.rpc("import_fixtures", { _rows: data.rows.map(({ markets, ...row }) => ({ ...row, odds: markets ? { ...row.odds, markets } : row.odds })), _mode: data.mode });
     if (result.error) throw new Error("Fixtures were not saved. Please retry.");
     return result.data;
   });

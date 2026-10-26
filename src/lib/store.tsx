@@ -4,10 +4,11 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { useServerFn } from "@tanstack/react-start";
 import { fixturesQueryOptions } from "./fixtures.query";
 import { deleteFixture, importFixtures } from "./fixtures.functions";
-import { fixtureSchema } from "./fixtures";
+import { fixtureSchema, type Markets } from "./fixtures";
 
 export type MatchStatus = "upcoming" | "live";
-export type Pick = "1" | "X" | "2";
+/** "1" | "X" | "2" for the main market, or "<market>:<option>" for extra markets. */
+export type Pick = string;
 
 export interface Match {
   id: string;
@@ -20,6 +21,7 @@ export interface Match {
   homeScore: number;
   awayScore: number;
   odds: { home: number; draw: number; away: number };
+  markets?: Markets | undefined;
 }
 
 export interface Selection {
@@ -151,7 +153,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       matches, selections, bets, balance, isAdmin, roleReady, user, authReady, oddsFormat, setOddsFormat,
       signOut: async () => { await supabase.auth.signOut(); },
       toggleSelection: (m, pick) => {
-        const odd = pick === "1" ? m.odds.home : pick === "X" ? m.odds.draw : m.odds.away;
+        const odd = selectedOdd(m, pick);
+        if (odd === null) return;
         setSelections((prev) => {
           const existing = prev.find((s) => s.matchId === m.id);
           if (existing?.pick === pick) return prev.filter((s) => s.matchId !== m.id);
@@ -163,7 +166,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearSelections: () => setSelections([]),
       acceptOdds: () => setSelections((prev) => prev.map((s) => {
         const match = matches.find((m) => m.id === s.matchId);
-        return match ? { ...s, odd: selectedOdd(match, s.pick), label: `${match.home} vs ${match.away}` } : s;
+        const odd = match ? selectedOdd(match, s.pick) : null;
+        return match && odd !== null ? { ...s, odd, label: `${match.home} vs ${match.away}` } : s;
       })),
       // TODO(backend): replace with MegaPay STK push / crypto webhook via a server function.
       deposit: (amount) => setBalance((b) => b + amount),
@@ -184,7 +188,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await save.mutateAsync({ data: { rows: [row], mode: "merge" } });
       },
       updateMatch: async (id, input) => {
-        const row = fixtureSchema.parse({ ...input, id, kickoff: new Date(input.kickoff).toISOString() });
+        const existing = matches.find((m) => m.id === id);
+        const row = fixtureSchema.parse({ ...input, ...(existing?.markets ? { markets: existing.markets } : {}), id, kickoff: new Date(input.kickoff).toISOString() });
         await save.mutateAsync({ data: { rows: [row], mode: "merge" } });
       },
       deleteMatch: async (id) => { await remove.mutateAsync({ data: { id } }); },
@@ -217,8 +222,37 @@ export function canPlaceBet(user: unknown, balance: number, stake: number) {
   return !!user && stake >= 1 && balance > 0 && stake <= balance;
 }
 
-export function selectedOdd(match: Match, pick: Pick) {
-  return pick === "1" ? match.odds.home : pick === "X" ? match.odds.draw : match.odds.away;
+export function selectedOdd(match: Match, pick: Pick): number | null {
+  if (pick === "1") return match.odds.home;
+  if (pick === "X") return match.odds.draw;
+  if (pick === "2") return match.odds.away;
+  const i = pick.indexOf(":");
+  if (i < 0) return null;
+  const group = match.markets?.[pick.slice(0, i)];
+  const key = pick.slice(i + 1);
+  if (!group) return null;
+  if (Array.isArray(group)) return group.find((g) => g.player === key)?.odd ?? null;
+  return group[key] ?? null;
+}
+
+const MARKET_NAMES: Record<string, string> = {
+  doubleChance: "Double Chance", bothTeamsToScore: "Both Teams to Score", overUnder: "Over/Under",
+  firstHalf: "1st Half", correctScore: "Correct Score", anytimeGoalscorers: "Anytime Goalscorer",
+};
+export function marketName(key: string) {
+  return MARKET_NAMES[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+}
+export function optionName(key: string) {
+  const m = /^(over|under)(\d)(\d)$/.exec(key);
+  if (m) return `${m[1] === "over" ? "Over" : "Under"} ${m[2]}.${m[3]}`;
+  if (key === "home") return "1"; if (key === "draw") return "X"; if (key === "away") return "2";
+  if (key === "yes") return "Yes"; if (key === "no") return "No"; if (key === "other") return "Other";
+  return key;
+}
+export function pickLabel(pick: Pick) {
+  if (pick === "1" || pick === "X" || pick === "2") return `1X2: ${pick}`;
+  const i = pick.indexOf(":");
+  return `${marketName(pick.slice(0, i))}: ${optionName(pick.slice(i + 1))}`;
 }
 
 export function selectionIssues(matches: Match[], selections: Selection[]) {
@@ -226,6 +260,7 @@ export function selectionIssues(matches: Match[], selections: Selection[]) {
     const match = matches.find((m) => m.id === selection.matchId);
     if (!match) return [{ matchId: selection.matchId, type: "void" as const, odd: null }];
     const odd = selectedOdd(match, selection.pick);
+    if (odd === null) return [{ matchId: selection.matchId, type: "void" as const, odd: null }];
     return odd === selection.odd ? [] : [{ matchId: selection.matchId, type: "changed" as const, odd }];
   });
 }
