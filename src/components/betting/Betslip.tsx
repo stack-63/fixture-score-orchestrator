@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { canPlaceBet, formatOdd, kes, useApp } from "@/lib/store";
-import { selectionIssues } from "@/lib/store";
+import { pickLabel, selectionIssues } from "@/lib/store";
 import { toast } from "sonner";
 
 export function Betslip({ onDeposit }: { onDeposit: () => void }) {
@@ -55,8 +55,8 @@ export function Betslip({ onDeposit }: { onDeposit: () => void }) {
         <div key={s.matchId} className="flex items-center gap-2 rounded-lg border bg-secondary p-2.5 text-sm">
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{s.label}</p>
-            <p className="text-xs text-muted-foreground">Pick: <span className="text-primary">{s.pick}</span></p>
-            {issues.find((issue) => issue.matchId === s.matchId)?.type === "void" && <p className="text-xs font-semibold text-destructive">Void — fixture removed</p>}
+            <p className="text-xs text-muted-foreground"><span className="text-primary">{pickLabel(s.pick)}</span></p>
+            {issues.find((issue) => issue.matchId === s.matchId)?.type === "void" && <p className="text-xs font-semibold text-destructive">Void — market no longer available</p>}
             {issues.find((issue) => issue.matchId === s.matchId)?.type === "changed" && <p className="text-xs font-semibold text-admin">Odds changed: {s.odd.toFixed(2)} → {issues.find((issue) => issue.matchId === s.matchId)?.odd?.toFixed(2)}</p>}
           </div>
           <span className="font-display text-lg font-bold">{formatOdd(s.odd, oddsFormat)}</span>

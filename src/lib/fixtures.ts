@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const oddValue = z.number().finite().gt(1, "Odds must be greater than 1.00");
+const marketKey = z.string().trim().min(1).max(60);
+export const scorerSchema = z.object({ player: z.string().trim().min(1).max(120), team: z.string().trim().max(120).optional(), odd: oddValue }).strict();
+/** Extra markets: named groups of pick -> odd (e.g. correctScore {"2-1": 8}), plus goalscorer lists. */
+export const marketsSchema = z.record(marketKey, z.union([z.record(marketKey, oddValue), z.array(scorerSchema).max(100)]))
+  .refine((m) => Object.keys(m).length <= 40, "Too many markets (max 40)");
+export type Markets = z.infer<typeof marketsSchema>;
+
 export const fixtureSchema = z.object({
   id: z.string().trim().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/, "Use letters, numbers, underscores or hyphens"),
   home: z.string().trim().min(1).max(120),
@@ -11,6 +19,7 @@ export const fixtureSchema = z.object({
   homeScore: z.number().int().min(0).max(999).default(0),
   awayScore: z.number().int().min(0).max(999).default(0),
   odds: z.object({ home: z.number().finite().gt(1), draw: z.number().finite().gt(1), away: z.number().finite().gt(1) }).strict(),
+  markets: marketsSchema.optional(),
 }).strict();
 
 export const fixtureBatchSchema = z.array(fixtureSchema).max(2000).superRefine((rows, ctx) => {
