@@ -16,6 +16,7 @@ import { Route as BetslipRouteImport } from './routes/betslip'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as MyBetsRouteImport } from './routes/my-bets'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,13 +88,29 @@ export interface FileRoutesById {
   '/live': typeof LiveRoute
   '/my-bets': typeof MyBetsRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/auth' | '/betslip' | '/live' | '/my-bets' | '/profile'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/betslip'
+    | '/live'
+    | '/my-bets'
+    | '/profile'
+    | '/reset-password'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/auth' | '/betslip' | '/live' | '/my-bets' | '/profile'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/betslip'
+    | '/live'
+    | '/my-bets'
+    | '/profile'
+    | '/reset-password'
   id:
     | '__root__'
     | '/'
@@ -96,6 +120,7 @@ export interface FileRouteTypes {
     | '/live'
     | '/my-bets'
     | '/profile'
+    | '/reset-password'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +131,7 @@ export interface RootRouteChildren {
   LiveRoute: typeof LiveRoute
   MyBetsRoute: typeof MyBetsRoute
   ProfileRoute: typeof ProfileRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -159,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -170,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   LiveRoute: LiveRoute,
   MyBetsRoute: MyBetsRoute,
   ProfileRoute: ProfileRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
