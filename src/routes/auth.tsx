@@ -130,7 +130,7 @@ function Page() {
                     redirectTo: `${window.location.origin}/reset-password`,
                   });
                   if (error) return toast.error(error.message);
-                  toast.success("Check your email for a password reset link");
+                  toast.success("Check your email for a password reset link"); return undefined;
                 }}
               >
                 Forgot password?

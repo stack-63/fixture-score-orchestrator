@@ -45,7 +45,7 @@ function Page() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Password updated");
-    navigate({ to: "/", replace: true });
+    navigate({ to: "/", replace: true }); return undefined;
   };
 
   return (
