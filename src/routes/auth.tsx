@@ -120,6 +120,22 @@ function Page() {
                 onKeyDown={(e) => e.key === "Enter" && submit()}
               />
             </div>
+            {mode === "signin" && (
+              <button
+                type="button"
+                className="text-xs font-semibold text-primary hover:underline"
+                onClick={async () => {
+                  if (!email) return toast.error("Enter your email first");
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  if (error) return toast.error(error.message);
+                  toast.success("Check your email for a password reset link");
+                }}
+              >
+                Forgot password?
+              </button>
+            )}
           </div>
           <Button variant="neon" size="lg" className="w-full" disabled={loading} onClick={submit}>
             {loading ? <Loader2 className="animate-spin" /> : mode === "signin" ? <LogIn /> : <UserPlus />}
