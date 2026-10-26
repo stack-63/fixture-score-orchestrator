@@ -123,17 +123,21 @@ function Page() {
             {mode === "signin" && (
               <button
                 type="button"
-                className="text-xs font-semibold text-primary hover:underline"
+                disabled={loading}
+                className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
                 onClick={async () => {
-                  if (!email) return toast.error("Enter your email first");
+                  if (!email) return toast.error("Type your email above first, then tap Forgot password");
+                  setLoading(true);
                   const { error } = await supabase.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/reset-password`,
                   });
+                  setLoading(false);
                   if (error) return toast.error(error.message);
-                  toast.success("Check your email for a password reset link"); return undefined;
+                  toast.success(`Reset link sent to ${email}. Check your inbox and spam folder.`);
+                  return undefined;
                 }}
               >
-                Forgot password?
+                {loading ? "Sending…" : "Forgot password?"}
               </button>
             )}
           </div>
