@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-background/95 backdrop-blur lg:hidden">
         {nav.map((n) => (
           <Link key={n.to} to={n.to} activeOptions={{ exact: true }}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] ${"admin" in n ? "text-admin" : "text-muted-foreground"}`}
+            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 font-display text-xs font-semibold uppercase tracking-wider ${"admin" in n ? "text-admin" : "text-muted-foreground"}`}
             activeProps={{ className: "text-primary" }}>
             <n.icon className="h-5 w-5" />{"admin" in n ? "Admin" : n.label}
             {"badge" in n && n.badge > 0 && <span className="absolute top-1 right-[calc(50%-18px)] rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">{n.badge}</span>}
